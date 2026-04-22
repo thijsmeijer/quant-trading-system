@@ -414,6 +414,24 @@ class StrategyRunRepository:
             return None
         return _strategy_run_from_model(model)
 
+    def latest_run(
+        self,
+        session: Session,
+        *,
+        run_mode: RunMode,
+    ) -> StoredStrategyRun | None:
+        """Return the most recent strategy run for one environment."""
+
+        model = session.execute(
+            select(StrategyRun)
+            .where(StrategyRun.run_mode == run_mode)
+            .order_by(StrategyRun.started_at.desc(), StrategyRun.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        if model is None:
+            return None
+        return _strategy_run_from_model(model)
+
     def find_run_by_identity(
         self,
         session: Session,

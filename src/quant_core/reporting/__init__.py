@@ -15,7 +15,11 @@ from quant_core.reporting.execution import (
     ExecutionReportSummary,
     build_execution_report_summary,
 )
-from quant_core.reporting.paper_runs import PaperRunReport, build_paper_run_report
+from quant_core.reporting.paper_runs import (
+    PaperRunReport,
+    build_paper_run_report,
+    load_paper_run_report,
+)
 
 __all__ = [
     "DailyDataQualityReport",
@@ -29,4 +33,5 @@ __all__ = [
     "build_execution_audit_summary",
     "build_execution_report_summary",
     "build_paper_run_report",
+    "load_paper_run_report",
 ]

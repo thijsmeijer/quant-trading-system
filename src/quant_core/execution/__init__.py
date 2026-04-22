@@ -1,5 +1,10 @@
 """Order execution and lifecycle package."""
 
+from quant_core.execution.alerts import (
+    ActiveAlertSummary,
+    OperationalAlertService,
+    build_active_alert_summary,
+)
 from quant_core.execution.identity import (
     IdentifiedTradeIntent,
     identify_trade_intents,
@@ -33,9 +38,11 @@ from quant_core.execution.state import (
 )
 
 __all__ = [
+    "ActiveAlertSummary",
     "ExecutionOrderCandidate",
     "IdentifiedTradeIntent",
     "InvalidPaperExecutionTransitionError",
+    "OperationalAlertService",
     "OrderManagementService",
     "OperationalStateRefresher",
     "PaperExecutionOrder",
@@ -47,6 +54,7 @@ __all__ = [
     "RefreshedOperationalState",
     "RiskChecksFailedForExecutionError",
     "TradeIntent",
+    "build_active_alert_summary",
     "build_order_intents",
     "build_execution_order_candidates",
     "create_paper_execution_order",

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from typing import cast
 
 from quant_core.data import (
     OperationalRunMode,
@@ -106,4 +108,45 @@ def build_paper_run_report(
         latest_account_equity=(account_snapshot.equity if account_snapshot is not None else None),
         latest_gross_exposure=(risk_snapshot.gross_exposure if risk_snapshot is not None else None),
         generated_at=generated_at,
+    )
+
+
+def load_paper_run_report(metadata: Mapping[str, object] | None) -> PaperRunReport | None:
+    """Load an archived paper-run report from stored metadata."""
+
+    if metadata is None:
+        return None
+
+    failed_reason_codes = cast(Sequence[object], metadata["failed_reason_codes"])
+    return PaperRunReport(
+        run_id=int(str(metadata["run_id"])),
+        run_mode=str(metadata["run_mode"]),  # type: ignore[arg-type]
+        strategy_name=str(metadata["strategy_name"]),
+        signal_date=date.fromisoformat(str(metadata["signal_date"])),
+        execution_date=(
+            date.fromisoformat(str(metadata["execution_date"]))
+            if metadata["execution_date"] is not None
+            else None
+        ),
+        status=str(metadata["status"]),
+        approved=bool(metadata["approved"]),
+        failed_reason_codes=tuple(str(item) for item in failed_reason_codes),
+        order_count=int(str(metadata["order_count"])),
+        fill_count=int(str(metadata["fill_count"])),
+        rejected_order_count=int(str(metadata["rejected_order_count"])),
+        open_incident_count=int(str(metadata["open_incident_count"])),
+        reconciliation_total_rows=int(str(metadata["reconciliation_total_rows"])),
+        reconciliation_mismatched_rows=int(str(metadata["reconciliation_mismatched_rows"])),
+        reconciliation_critical_rows=int(str(metadata["reconciliation_critical_rows"])),
+        latest_account_equity=(
+            Decimal(str(metadata["latest_account_equity"]))
+            if metadata["latest_account_equity"] is not None
+            else None
+        ),
+        latest_gross_exposure=(
+            Decimal(str(metadata["latest_gross_exposure"]))
+            if metadata["latest_gross_exposure"] is not None
+            else None
+        ),
+        generated_at=datetime.fromisoformat(str(metadata["generated_at"])),
     )

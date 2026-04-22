@@ -14,6 +14,7 @@ from quant_core.data import (
     SnapshotRepository,
     StrategyRunRepository,
 )
+from quant_core.execution.alerts import OperationalAlertService
 from quant_core.execution.oms import OrderManagementService
 from quant_core.execution.state import OperationalStateRefresher
 from quant_core.portfolio import PersistedTargetPositionBuilder
@@ -79,6 +80,7 @@ class PaperRunOrchestrator:
         self._order_repository = OrderRepository()
         self._snapshot_repository = SnapshotRepository()
         self._strategy_repository = StrategyRunRepository()
+        self._alert_service = OperationalAlertService()
 
     def run(
         self,
@@ -194,6 +196,12 @@ class PaperRunOrchestrator:
                 else timestamps.risk_checked_at
             ),
             metadata_json={"paper_run_report": paper_run_report.as_metadata()},
+        )
+        self._alert_service.record_run_alerts(
+            session,
+            run_mode="paper",
+            strategy_run_id=persisted_strategy.run.id,
+            occurred_at=paper_run_report.generated_at,
         )
 
         return PaperRunSummary(
