@@ -105,3 +105,48 @@ class BarsDaily(Base):
     close: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     adjusted_close: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     volume: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class RawCorporateAction(Base):
+    """Raw vendor payloads for corporate actions before normalization."""
+
+    __tablename__ = "raw_corporate_actions"
+    __table_args__ = (UniqueConstraint("instrument_id", "vendor", "action_type", "ex_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    vendor: Mapped[str] = mapped_column(String(64), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    ex_date: Mapped[date] = mapped_column(Date, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CorporateAction(Base):
+    """Normalized dividend and split metadata for future adjusted-data work."""
+
+    __tablename__ = "corporate_actions"
+    __table_args__ = (
+        UniqueConstraint("instrument_id", "action_type", "ex_date"),
+        UniqueConstraint("raw_action_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    raw_action_id: Mapped[int] = mapped_column(
+        ForeignKey("raw_corporate_actions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    ex_date: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cash_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    split_from: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    split_to: Mapped[int | None] = mapped_column(Integer, nullable=True)
