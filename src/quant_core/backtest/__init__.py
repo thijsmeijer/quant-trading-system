@@ -5,8 +5,10 @@ from quant_core.backtest.daily_bars import (
     RebalanceInput,
     build_rebalance_input,
 )
+from quant_core.backtest.friction import BacktestFrictionConfig
 
 __all__ = [
+    "BacktestFrictionConfig",
     "InvalidBacktestWindowError",
     "RebalanceInput",
     "build_rebalance_input",

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from quant_core.backtest.friction import BacktestFrictionConfig
 from quant_core.research.daily_bars import ResearchDataset
 
 
@@ -19,6 +20,7 @@ class RebalanceInput:
 
     signal_date: date
     execution_date: date
+    friction_config: BacktestFrictionConfig
     latest_adjusted_closes: dict[str, Decimal]
 
 
@@ -27,6 +29,7 @@ def build_rebalance_input(
     dataset: ResearchDataset,
     signal_date: date,
     execution_date: date,
+    friction_config: BacktestFrictionConfig,
 ) -> RebalanceInput:
     """Freeze the market state known on the signal date for later execution."""
 
@@ -43,5 +46,6 @@ def build_rebalance_input(
     return RebalanceInput(
         signal_date=signal_date,
         execution_date=execution_date,
+        friction_config=friction_config,
         latest_adjusted_closes=signal_history.latest_adjusted_closes(),
     )
