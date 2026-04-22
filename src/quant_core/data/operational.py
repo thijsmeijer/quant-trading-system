@@ -476,7 +476,7 @@ class StrategyRunRepository:
             )
             .join(Instrument, Instrument.id == Signal.instrument_id)
             .where(Signal.strategy_run_id == strategy_run_id)
-            .order_by(Instrument.symbol, Signal.signal_name)
+            .order_by(Signal.rank.nullslast(), Instrument.symbol, Signal.signal_name)
         ).all()
         return tuple(
             StoredSignal(
