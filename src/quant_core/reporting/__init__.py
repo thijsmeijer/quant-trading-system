@@ -20,6 +20,11 @@ from quant_core.reporting.paper_runs import (
     build_paper_run_report,
     load_paper_run_report,
 )
+from quant_core.reporting.readiness import (
+    ExpectationCheck,
+    PaperRunComparison,
+    compare_paper_run_to_expectation,
+)
 
 __all__ = [
     "DailyDataQualityReport",
@@ -28,10 +33,13 @@ __all__ = [
     "DailyDataQualitySummary",
     "ExecutionAuditEntry",
     "ExecutionAuditSummary",
+    "ExpectationCheck",
     "ExecutionReportSummary",
     "PaperRunReport",
+    "PaperRunComparison",
     "build_execution_audit_summary",
     "build_execution_report_summary",
     "build_paper_run_report",
+    "compare_paper_run_to_expectation",
     "load_paper_run_report",
 ]

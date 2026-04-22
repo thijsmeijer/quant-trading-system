@@ -1,0 +1,13 @@
+paper_promotion:
+  minimum_completed_runs: 20
+  maximum_open_critical_incidents: 0
+  maximum_open_warning_incidents: 0
+  manual_approval_required: true
+  latest_run_expectation:
+    require_approved: true
+    min_fill_ratio: "1.0"
+    max_rejected_order_count: 0
+    max_reconciliation_critical_rows: 0
+    max_open_incident_count: 0
+    expected_order_count: null
+    max_order_count_delta: 0

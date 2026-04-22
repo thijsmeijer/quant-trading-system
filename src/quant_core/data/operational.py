@@ -432,6 +432,23 @@ class StrategyRunRepository:
             return None
         return _strategy_run_from_model(model)
 
+    def count_runs(
+        self,
+        session: Session,
+        *,
+        run_mode: RunMode,
+        statuses: Sequence[str] | None = None,
+    ) -> int:
+        """Count persisted runs for one environment, optionally filtered by status."""
+
+        query = (
+            select(func.count()).select_from(StrategyRun).where(StrategyRun.run_mode == run_mode)
+        )
+        if statuses is not None:
+            query = query.where(StrategyRun.status.in_(list(statuses)))
+        result = session.scalar(query)
+        return int(result or 0)
+
     def find_run_by_identity(
         self,
         session: Session,

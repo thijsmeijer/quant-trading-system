@@ -6,10 +6,16 @@ from quant_core.dashboard.health import (
     ServiceHealthSummary,
 )
 from quant_core.dashboard.overview import OperationsOverview, OperationsOverviewService
+from quant_core.dashboard.readiness import (
+    PromotionReadinessService,
+    PromotionReadinessSummary,
+)
 
 __all__ = [
     "OperationsOverview",
     "OperationsOverviewService",
+    "PromotionReadinessService",
+    "PromotionReadinessSummary",
     "ServiceHealthCheck",
     "ServiceHealthService",
     "ServiceHealthSummary",
