@@ -9,13 +9,27 @@ from quant_core.data.models.market_data import (
     RawCorporateAction,
     TradingCalendar,
 )
+from quant_core.data.models.operational import (
+    FeaturesDaily,
+    RiskCheck,
+    Signal,
+    StrategyRun,
+    TargetPosition,
+    TargetWeight,
+)
 
 __all__ = [
     "Base",
     "BarsDaily",
     "CorporateAction",
+    "FeaturesDaily",
     "Instrument",
     "RawBarsDaily",
     "RawCorporateAction",
+    "RiskCheck",
+    "Signal",
+    "StrategyRun",
+    "TargetPosition",
+    "TargetWeight",
     "TradingCalendar",
 ]
