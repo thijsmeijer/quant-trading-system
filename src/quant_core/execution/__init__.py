@@ -9,6 +9,12 @@ from quant_core.execution.intents import (
     TradeIntent,
     build_order_intents,
 )
+from quant_core.execution.oms import (
+    ExecutionOrderCandidate,
+    OrderManagementService,
+    RiskChecksFailedForExecutionError,
+    build_execution_order_candidates,
+)
 from quant_core.execution.paper import (
     InvalidPaperExecutionTransitionError,
     PaperExecutionOrder,
@@ -18,13 +24,17 @@ from quant_core.execution.paper import (
 )
 
 __all__ = [
+    "ExecutionOrderCandidate",
     "IdentifiedTradeIntent",
     "InvalidPaperExecutionTransitionError",
+    "OrderManagementService",
     "PaperExecutionOrder",
     "PaperExecutionStatus",
     "RejectedTargetForExecutionError",
+    "RiskChecksFailedForExecutionError",
     "TradeIntent",
     "build_order_intents",
+    "build_execution_order_candidates",
     "create_paper_execution_order",
     "identify_trade_intents",
     "transition_paper_execution_order",

@@ -5,6 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from quant_core.broker.base import (
+    BrokerAccount,
+    BrokerFill,
+    BrokerGateway,
+    BrokerOrder,
+    BrokerOrderRequest,
+    BrokerPosition,
+    BrokerSubmission,
+)
+from quant_core.broker.fake import FakeBrokerGateway
 from quant_core.execution import PaperExecutionOrder, PaperExecutionStatus
 
 
@@ -21,6 +31,31 @@ class PaperBrokerOrderRequest:
     symbol: str
     side: str
     delta_weight: Decimal
+
+
+@dataclass(slots=True)
+class PaperBrokerAdapter(BrokerGateway):
+    """Paper-mode broker adapter backed by the deterministic fake broker."""
+
+    gateway: FakeBrokerGateway
+
+    def submit_order(self, request: BrokerOrderRequest) -> BrokerSubmission:
+        return self.gateway.submit_order(request)
+
+    def cancel_order(self, broker_order_id: str) -> BrokerOrder:
+        return self.gateway.cancel_order(broker_order_id)
+
+    def list_orders(self) -> tuple[BrokerOrder, ...]:
+        return self.gateway.list_orders()
+
+    def list_fills(self) -> tuple[BrokerFill, ...]:
+        return self.gateway.list_fills()
+
+    def list_positions(self) -> tuple[BrokerPosition, ...]:
+        return self.gateway.list_positions()
+
+    def get_account(self) -> BrokerAccount:
+        return self.gateway.get_account()
 
 
 def build_paper_broker_order_request(
