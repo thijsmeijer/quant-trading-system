@@ -15,6 +15,10 @@ class DuplicateTargetWeightError(ValueError):
     """Raised when a target includes the same symbol more than once."""
 
 
+class InvalidTargetNormalizationError(ValueError):
+    """Raised when a target cannot be normalized into usable weights."""
+
+
 @dataclass(frozen=True, slots=True)
 class PortfolioTarget:
     """Read-only target weights at one decision timestamp."""
@@ -66,9 +70,55 @@ def build_portfolio_target(
     )
 
 
+def normalize_portfolio_target(target: PortfolioTarget) -> PortfolioTarget:
+    """Scale a proposed target into deterministic long-only weights summing to one."""
+
+    positive_weights = [
+        (symbol, weight) for symbol, weight in target.weights if weight > Decimal("0")
+    ]
+    total_weight = sum((weight for _, weight in positive_weights), start=Decimal("0"))
+    if total_weight <= Decimal("0"):
+        raise InvalidTargetNormalizationError(
+            "portfolio target must have a positive total weight to normalize"
+        )
+
+    normalized_weights: list[tuple[str, Decimal]] = []
+    for symbol, weight in positive_weights:
+        normalized_weight = (weight / total_weight).quantize(
+            TARGET_WEIGHT_PRECISION,
+            rounding=ROUND_HALF_UP,
+        )
+        normalized_weights.append((symbol, normalized_weight))
+
+    rounded_total = sum((weight for _, weight in normalized_weights), start=Decimal("0"))
+    residual = Decimal("1.000000") - rounded_total
+    if residual != Decimal("0"):
+        index = _residual_receiver_index(normalized_weights)
+        symbol, weight = normalized_weights[index]
+        normalized_weights[index] = (
+            symbol,
+            (weight + residual).quantize(
+                TARGET_WEIGHT_PRECISION,
+                rounding=ROUND_HALF_UP,
+            ),
+        )
+
+    return PortfolioTarget(
+        as_of=target.as_of,
+        weights=tuple(sorted(normalized_weights, key=lambda item: item[0])),
+    )
+
+
 def _iter_weights(
     weights: Mapping[str, Decimal] | Iterable[tuple[str, Decimal]],
 ) -> Iterable[tuple[str, Decimal]]:
     if isinstance(weights, Mapping):
         return weights.items()
     return weights
+
+
+def _residual_receiver_index(weights: list[tuple[str, Decimal]]) -> int:
+    return max(
+        range(len(weights)),
+        key=lambda index: (weights[index][1], weights[index][0]),
+    )
