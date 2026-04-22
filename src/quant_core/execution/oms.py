@@ -76,11 +76,13 @@ def build_execution_order_candidates(
         side: Literal["BUY", "SELL"] = "BUY" if delta_quantity > Decimal("0") else "SELL"
         quantity = abs(delta_quantity)
         reference_price = target_position.reference_price if target_position is not None else None
-        notional = (
-            (quantity * reference_price).quantize(ORDER_PRECISION)
-            if reference_price is not None
-            else None
-        )
+        notional = None
+        if reference_price is not None:
+            notional = (
+                target_position.target_notional
+                if target_position is not None and current_quantity == Decimal("0")
+                else (quantity * reference_price).quantize(ORDER_PRECISION)
+            )
         digest = sha256(
             "|".join(
                 [

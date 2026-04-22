@@ -22,15 +22,21 @@ from quant_core.execution.paper import (
     create_paper_execution_order,
     transition_paper_execution_order,
 )
+from quant_core.execution.state import (
+    OperationalStateRefresher,
+    RefreshedOperationalState,
+)
 
 __all__ = [
     "ExecutionOrderCandidate",
     "IdentifiedTradeIntent",
     "InvalidPaperExecutionTransitionError",
     "OrderManagementService",
+    "OperationalStateRefresher",
     "PaperExecutionOrder",
     "PaperExecutionStatus",
     "RejectedTargetForExecutionError",
+    "RefreshedOperationalState",
     "RiskChecksFailedForExecutionError",
     "TradeIntent",
     "build_order_intents",

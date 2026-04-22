@@ -34,6 +34,7 @@ class FakeBrokerGateway(BrokerGateway):
         self._orders_by_broker_id: dict[str, BrokerOrder] = {}
         self._fills_by_id: dict[str, BrokerFill] = {}
         self._positions: dict[str, Decimal] = {}
+        self._market_values: dict[str, Decimal] = {}
         self._cash = self.starting_cash
         self._updated_at = datetime.now(tz=UTC)
 
@@ -110,7 +111,7 @@ class FakeBrokerGateway(BrokerGateway):
             BrokerPosition(
                 symbol=symbol,
                 quantity=quantity,
-                market_value=quantity * self.fill_price_by_symbol.get(symbol, Decimal("0")),
+                market_value=self._market_values.get(symbol, Decimal("0.000000")),
             )
             for symbol, quantity in sorted(self._positions.items())
             if quantity != Decimal("0")
@@ -146,7 +147,11 @@ class FakeBrokerGateway(BrokerGateway):
             symbol=request.symbol,
             quantity=request.quantity,
             price=fill_price,
-            notional=(request.quantity * fill_price).quantize(Decimal("0.000001")),
+            notional=(
+                request.notional
+                if request.notional is not None
+                else (request.quantity * fill_price).quantize(Decimal("0.000001"))
+            ),
             filled_at=order.submitted_at,
         )
         self._fills_by_id[fill.broker_fill_id] = fill
@@ -154,6 +159,10 @@ class FakeBrokerGateway(BrokerGateway):
         signed_quantity = request.quantity if request.side == "BUY" else -request.quantity
         self._positions[request.symbol] = (
             self._positions.get(request.symbol, Decimal("0")) + signed_quantity
+        ).quantize(Decimal("0.000001"))
+        signed_notional = fill.notional if request.side == "BUY" else -fill.notional
+        self._market_values[request.symbol] = (
+            self._market_values.get(request.symbol, Decimal("0.000000")) + signed_notional
         ).quantize(Decimal("0.000001"))
         cash_delta = fill.notional if request.side == "SELL" else -fill.notional
         self._cash = (self._cash + cash_delta).quantize(Decimal("0.000001"))
