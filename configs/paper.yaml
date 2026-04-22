@@ -1,0 +1,14 @@
+app:
+  env: paper
+  timezone: UTC
+  log_level: INFO
+
+database:
+  url: ${DATABASE_URL}
+
+trading:
+  mode: paper
+  live_enabled: false
+  regular_hours_only: true
+  require_manual_approval: true
+

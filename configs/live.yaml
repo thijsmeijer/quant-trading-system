@@ -1,0 +1,15 @@
+app:
+  env: live
+  timezone: UTC
+  log_level: INFO
+
+database:
+  url: ${DATABASE_URL}
+
+trading:
+  mode: live
+  live_enabled: false
+  regular_hours_only: true
+  require_manual_approval: true
+  kill_switch_required: true
+

@@ -1,0 +1,13 @@
+app:
+  env: dev
+  timezone: UTC
+  log_level: INFO
+
+database:
+  url: ${DATABASE_URL}
+
+trading:
+  mode: dev
+  live_enabled: false
+  regular_hours_only: true
+

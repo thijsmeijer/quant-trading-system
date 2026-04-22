@@ -1,0 +1,36 @@
+PYTHON ?= python3
+VENV ?= .venv
+BIN := $(VENV)/bin
+PIP := $(BIN)/pip
+PYTEST := $(BIN)/pytest
+RUFF := $(BIN)/ruff
+MYPY := $(BIN)/mypy
+
+.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down
+
+venv:
+	$(PYTHON) -m venv $(VENV)
+
+install: venv
+	$(PIP) install --upgrade pip
+	$(PIP) install -e .[dev]
+
+test:
+	$(PYTEST) tests/unit
+
+lint:
+	$(RUFF) check .
+
+format-check:
+	$(RUFF) format --check .
+
+type-check:
+	$(MYPY) -p quant_core
+
+verify: test lint format-check type-check
+
+postgres-up:
+	docker compose up -d postgres
+
+postgres-down:
+	docker compose down

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quant-core"
+version = "0.1.0"
+description = "ETF Quant Core foundations and platform services."
+readme = "AGENTS.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.10,<3.0",
+  "pyyaml>=6.0,<7.0",
+  "sqlalchemy>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "alembic>=1.14,<2.0",
+  "mypy>=1.10,<2.0",
+  "psycopg[binary]>=3.2,<4.0",
+  "pytest>=8.0,<9.0",
+  "ruff>=0.6,<1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quant_core"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["quant_core"]
+explicit_package_bases = true
+warn_unused_ignores = true
+mypy_path = ["src"]

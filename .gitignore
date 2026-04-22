@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+.env
+.ai
+AGENTS.md
+.idea
+etf_quant_system_roadmap.md

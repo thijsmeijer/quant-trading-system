@@ -1,0 +1,51 @@
+version: 1
+as_of: 2026-04-20
+universe:
+  name: core_us_etfs
+  venue: us_equities
+  bar_frequency: daily
+  regular_hours_only: true
+eligibility:
+  min_price: 20
+  min_average_daily_volume: 1000000
+  min_history_days: 252
+  excluded_flags:
+    - leveraged
+    - inverse
+instruments:
+  - symbol: SPY
+    name: SPDR S&P 500 ETF Trust
+    category: broad_us_equity
+    exchange: ARCA
+    is_active: true
+    flags: []
+  - symbol: VEA
+    name: Vanguard FTSE Developed Markets ETF
+    category: international_equity
+    exchange: ARCA
+    is_active: true
+    flags: []
+  - symbol: XLV
+    name: Health Care Select Sector SPDR Fund
+    category: sector_equity
+    exchange: ARCA
+    is_active: true
+    flags: []
+  - symbol: BND
+    name: Vanguard Total Bond Market ETF
+    category: aggregate_bonds
+    exchange: NASDAQ
+    is_active: true
+    flags: []
+  - symbol: IEF
+    name: iShares 7-10 Year Treasury Bond ETF
+    category: treasury_bonds
+    exchange: NASDAQ
+    is_active: true
+    flags: []
+  - symbol: SHY
+    name: iShares 1-3 Year Treasury Bond ETF
+    category: defensive_treasury
+    exchange: NASDAQ
+    is_active: true
+    flags: []
