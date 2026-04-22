@@ -1,4 +1,4 @@
-"""Phase 1 core market-data schema foundations."""
+"""Core market-data schema foundations."""
 
 from __future__ import annotations
 

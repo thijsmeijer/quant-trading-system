@@ -1,4 +1,4 @@
-"""Phase 1 corporate-actions storage scaffold."""
+"""Corporate-actions storage scaffold."""
 
 from __future__ import annotations
 

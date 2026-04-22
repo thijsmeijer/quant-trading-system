@@ -1,4 +1,4 @@
-"""Canonical Phase 1 market-data schema models."""
+"""Canonical market-data schema models."""
 
 from __future__ import annotations
 

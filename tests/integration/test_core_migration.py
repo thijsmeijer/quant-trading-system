@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, inspect
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_phase1_migration_builds_core_tables() -> None:
+def test_core_migration_builds_market_data_tables() -> None:
     database_name = f"quant_core_test_{uuid4().hex}"
     target_url = f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}"
 

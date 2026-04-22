@@ -1,7 +1,7 @@
 from quant_core.data.models import Base
 
 
-def test_phase1_metadata_exposes_core_tables() -> None:
+def test_core_metadata_exposes_market_data_tables() -> None:
     tables = Base.metadata.tables
 
     assert {
