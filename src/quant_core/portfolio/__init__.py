@@ -1,5 +1,14 @@
 """Portfolio construction package."""
 
+from quant_core.portfolio.positions import (
+    MissingPortfolioAccountStateError,
+    MissingPortfolioPriceError,
+    MissingTargetWeightStateError,
+    PersistedTargetPositionBuilder,
+    PortfolioTargetAllocation,
+    PortfolioTargetPosition,
+    build_target_positions,
+)
 from quant_core.portfolio.targets import (
     DuplicateTargetWeightError,
     InvalidTargetNormalizationError,
@@ -11,7 +20,14 @@ from quant_core.portfolio.targets import (
 __all__ = [
     "DuplicateTargetWeightError",
     "InvalidTargetNormalizationError",
+    "MissingPortfolioAccountStateError",
+    "MissingPortfolioPriceError",
+    "MissingTargetWeightStateError",
     "PortfolioTarget",
+    "PortfolioTargetAllocation",
+    "PortfolioTargetPosition",
+    "PersistedTargetPositionBuilder",
     "build_portfolio_target",
+    "build_target_positions",
     "normalize_portfolio_target",
 ]
