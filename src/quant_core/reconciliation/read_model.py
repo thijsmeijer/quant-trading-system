@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from quant_core.broker import PaperBrokerOrderRequest
-from quant_core.execution import PaperExecutionOrder
+if TYPE_CHECKING:
+    from quant_core.broker.paper import PaperBrokerOrderRequest
+    from quant_core.execution.paper import PaperExecutionOrder
 
 
 class ReconciliationRowStatus(StrEnum):

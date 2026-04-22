@@ -6,7 +6,7 @@ PYTEST := $(BIN)/pytest
 RUFF := $(BIN)/ruff
 MYPY := $(BIN)/mypy
 
-.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down
+.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down paper-run
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -34,3 +34,6 @@ postgres-up:
 
 postgres-down:
 	docker compose down
+
+paper-run:
+	PYTHONPATH=src $(BIN)/python -m quant_core.execution.cli $(ARGS)

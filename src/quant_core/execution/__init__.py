@@ -22,6 +22,11 @@ from quant_core.execution.paper import (
     create_paper_execution_order,
     transition_paper_execution_order,
 )
+from quant_core.execution.paper_run import (
+    PaperRunOrchestrator,
+    PaperRunSummary,
+    PaperRunTimestamps,
+)
 from quant_core.execution.state import (
     OperationalStateRefresher,
     RefreshedOperationalState,
@@ -35,6 +40,9 @@ __all__ = [
     "OperationalStateRefresher",
     "PaperExecutionOrder",
     "PaperExecutionStatus",
+    "PaperRunOrchestrator",
+    "PaperRunSummary",
+    "PaperRunTimestamps",
     "RejectedTargetForExecutionError",
     "RefreshedOperationalState",
     "RiskChecksFailedForExecutionError",

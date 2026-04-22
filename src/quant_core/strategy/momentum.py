@@ -249,20 +249,36 @@ class MomentumRotationStrategy:
                 signal.symbol for signal in decision.signals if signal.is_selected
             ],
         }
-        run = self._repository.create_run(
+        existing_run = self._repository.find_run_by_identity(
             session,
-            StrategyRunCreate(
-                run_mode=run_mode,
-                strategy_name=self.name,
-                config_version=config.version,
-                config_hash=config.config_hash(),
-                signal_date=decision.signal_date,
-                execution_date=decision.execution_date,
-                status="running",
-                started_at=started_at,
-                metadata_json=metadata,
-            ),
+            run_mode=run_mode,
+            strategy_name=self.name,
+            config_hash=config.config_hash(),
+            signal_date=decision.signal_date,
+            execution_date=decision.execution_date,
         )
+        if existing_run is None:
+            run = self._repository.create_run(
+                session,
+                StrategyRunCreate(
+                    run_mode=run_mode,
+                    strategy_name=self.name,
+                    config_version=config.version,
+                    config_hash=config.config_hash(),
+                    signal_date=decision.signal_date,
+                    execution_date=decision.execution_date,
+                    status="running",
+                    started_at=started_at,
+                    metadata_json=metadata,
+                ),
+            )
+        else:
+            run = self._repository.update_run_status(
+                session,
+                strategy_run_id=existing_run.id,
+                status="running",
+                metadata_json=metadata,
+            )
 
         stored_signals = self._repository.replace_signals(
             session,

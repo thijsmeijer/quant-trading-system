@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from quant_core.broker.base import (
     BrokerAccount,
@@ -15,7 +16,9 @@ from quant_core.broker.base import (
     BrokerSubmission,
 )
 from quant_core.broker.fake import FakeBrokerGateway
-from quant_core.execution import PaperExecutionOrder, PaperExecutionStatus
+
+if TYPE_CHECKING:
+    from quant_core.execution.paper import PaperExecutionOrder
 
 
 class InvalidPaperBrokerRequestError(ValueError):
@@ -64,7 +67,7 @@ def build_paper_broker_order_request(
 ) -> PaperBrokerOrderRequest:
     """Translate a pending paper execution order into the paper broker boundary."""
 
-    if order.status is not PaperExecutionStatus.PENDING:
+    if order.status.value != "pending":
         raise InvalidPaperBrokerRequestError(
             "paper broker requests require a PENDING execution order"
         )

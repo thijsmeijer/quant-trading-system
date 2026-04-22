@@ -414,6 +414,34 @@ class StrategyRunRepository:
             return None
         return _strategy_run_from_model(model)
 
+    def find_run_by_identity(
+        self,
+        session: Session,
+        *,
+        run_mode: RunMode,
+        strategy_name: str,
+        config_hash: str,
+        signal_date: date,
+        execution_date: date | None,
+    ) -> StoredStrategyRun | None:
+        """Find an existing strategy run for deterministic reruns."""
+
+        model = session.execute(
+            select(StrategyRun)
+            .where(
+                StrategyRun.run_mode == run_mode,
+                StrategyRun.strategy_name == strategy_name,
+                StrategyRun.config_hash == config_hash,
+                StrategyRun.signal_date == signal_date,
+                StrategyRun.execution_date == execution_date,
+            )
+            .order_by(StrategyRun.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        if model is None:
+            return None
+        return _strategy_run_from_model(model)
+
     def update_run_status(
         self,
         session: Session,
@@ -427,7 +455,12 @@ class StrategyRunRepository:
         if completed_at is not None:
             values["completed_at"] = completed_at
         if metadata_json is not None:
-            values["metadata_json"] = dict(metadata_json)
+            existing = self.get_run(session, strategy_run_id=strategy_run_id)
+            merged_metadata: dict[str, Any] = {}
+            if existing is not None and existing.metadata_json is not None:
+                merged_metadata.update(existing.metadata_json)
+            merged_metadata.update(dict(metadata_json))
+            values["metadata_json"] = merged_metadata
 
         session.execute(
             update(StrategyRun).where(StrategyRun.id == strategy_run_id).values(**values)
@@ -877,8 +910,14 @@ class OrderRepository:
         )
         return self.list_fills(session, run_mode=run_mode)
 
-    def list_fills(self, session: Session, *, run_mode: RunMode) -> tuple[StoredFill, ...]:
-        rows = session.execute(
+    def list_fills(
+        self,
+        session: Session,
+        *,
+        run_mode: RunMode,
+        strategy_run_id: int | None = None,
+    ) -> tuple[StoredFill, ...]:
+        query = (
             select(
                 Order.internal_order_id,
                 Fill.fill_quantity,
@@ -890,7 +929,11 @@ class OrderRepository:
             .join(Order, Order.id == Fill.order_id)
             .where(Order.run_mode == run_mode)
             .order_by(Fill.fill_at, Order.internal_order_id)
-        ).all()
+        )
+        if strategy_run_id is not None:
+            query = query.where(Order.strategy_run_id == strategy_run_id)
+
+        rows = session.execute(query).all()
         return tuple(
             StoredFill(
                 internal_order_id=internal_order_id,
@@ -915,6 +958,7 @@ class OrderRepository:
         session: Session,
         *,
         run_mode: RunMode,
+        strategy_run_id: int | None = None,
         statuses: Sequence[str] | None = None,
     ) -> tuple[StoredOrder, ...]:
         query = (
@@ -939,6 +983,8 @@ class OrderRepository:
             .where(Order.run_mode == run_mode)
             .order_by(Order.created_at, Order.internal_order_id)
         )
+        if strategy_run_id is not None:
+            query = query.where(Order.strategy_run_id == strategy_run_id)
         if statuses is not None:
             query = query.where(Order.status.in_(list(statuses)))
 
