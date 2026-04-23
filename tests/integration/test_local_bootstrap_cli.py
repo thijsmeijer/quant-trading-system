@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 from quant_core.data import AccountSnapshotWrite, SnapshotRepository, StrategyRunRepository
 from quant_core.data.bootstrap_cli import main as bootstrap_main
 from quant_core.data.ingestion.daily_bars_cli import main as import_main
-from quant_core.data.models import Instrument, TradingCalendar
+from quant_core.data.ingestion.trading_calendar_cli import main as trading_calendar_main
+from quant_core.data.models import Instrument
 from quant_core.execution.cli import main as paper_run_main
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,8 +61,10 @@ def test_local_bootstrap_can_prepare_instruments_for_import_and_paper_run(
     database_name = f"quant_core_bootstrap_sequence_{uuid4().hex}"
     target_url = f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}"
     universe_path = tmp_path / "universe.yaml"
+    calendar_path = tmp_path / "trading_calendar.json"
     input_path = tmp_path / "vendor_daily_bars.json"
     _write_universe(universe_path)
+    _write_trading_calendar(calendar_path)
     _write_vendor_bars(input_path)
     engine = _create_database(database_name=database_name, target_url=target_url)
 
@@ -69,9 +72,11 @@ def test_local_bootstrap_can_prepare_instruments_for_import_and_paper_run(
         bootstrap_exit = bootstrap_main(
             ["--database-url", target_url, "--universe-path", str(universe_path)]
         )
+        calendar_exit = trading_calendar_main(
+            ["--database-url", target_url, "--input-json", str(calendar_path)]
+        )
 
         with Session(engine) as session:
-            _seed_calendar(session)
             SnapshotRepository().store_account_snapshot(
                 session,
                 AccountSnapshotWrite(
@@ -109,6 +114,7 @@ def test_local_bootstrap_can_prepare_instruments_for_import_and_paper_run(
             session.commit()
 
         assert bootstrap_exit == 0
+        assert calendar_exit == 0
         assert import_exit == 0
         assert paper_exit == 0
         assert output["approved"] is True
@@ -182,38 +188,40 @@ def _write_vendor_bars(path: Path) -> None:
     path.write_text(json.dumps(payload))
 
 
-def _seed_calendar(session: Session) -> None:
-    session.add_all(
-        [
-            TradingCalendar(
-                trading_date=date(2026, 4, 20),
-                market_open_utc=datetime(2026, 4, 20, 13, 30, tzinfo=UTC),
-                market_close_utc=datetime(2026, 4, 20, 20, 0, tzinfo=UTC),
-                is_open=True,
-                is_early_close=False,
-            ),
-            TradingCalendar(
-                trading_date=date(2026, 4, 21),
-                market_open_utc=datetime(2026, 4, 21, 13, 30, tzinfo=UTC),
-                market_close_utc=datetime(2026, 4, 21, 20, 0, tzinfo=UTC),
-                is_open=True,
-                is_early_close=False,
-            ),
-            TradingCalendar(
-                trading_date=date(2026, 4, 22),
-                market_open_utc=datetime(2026, 4, 22, 13, 30, tzinfo=UTC),
-                market_close_utc=datetime(2026, 4, 22, 20, 0, tzinfo=UTC),
-                is_open=True,
-                is_early_close=False,
-            ),
-            TradingCalendar(
-                trading_date=date(2026, 4, 23),
-                market_open_utc=datetime(2026, 4, 23, 13, 30, tzinfo=UTC),
-                market_close_utc=datetime(2026, 4, 23, 20, 0, tzinfo=UTC),
-                is_open=True,
-                is_early_close=False,
-            ),
-        ]
+def _write_trading_calendar(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "trading_date": "2026-04-20",
+                    "market_open_utc": "2026-04-20T13:30:00+00:00",
+                    "market_close_utc": "2026-04-20T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-21",
+                    "market_open_utc": "2026-04-21T13:30:00+00:00",
+                    "market_close_utc": "2026-04-21T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-22",
+                    "market_open_utc": "2026-04-22T13:30:00+00:00",
+                    "market_close_utc": "2026-04-22T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-23",
+                    "market_open_utc": "2026-04-23T13:30:00+00:00",
+                    "market_close_utc": "2026-04-23T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+            ]
+        )
     )
 
 

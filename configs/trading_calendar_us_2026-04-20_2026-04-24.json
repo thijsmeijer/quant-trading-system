@@ -1,0 +1,37 @@
+[
+  {
+    "trading_date": "2026-04-20",
+    "market_open_utc": "2026-04-20T13:30:00+00:00",
+    "market_close_utc": "2026-04-20T20:00:00+00:00",
+    "is_open": true,
+    "is_early_close": false
+  },
+  {
+    "trading_date": "2026-04-21",
+    "market_open_utc": "2026-04-21T13:30:00+00:00",
+    "market_close_utc": "2026-04-21T20:00:00+00:00",
+    "is_open": true,
+    "is_early_close": false
+  },
+  {
+    "trading_date": "2026-04-22",
+    "market_open_utc": "2026-04-22T13:30:00+00:00",
+    "market_close_utc": "2026-04-22T20:00:00+00:00",
+    "is_open": true,
+    "is_early_close": false
+  },
+  {
+    "trading_date": "2026-04-23",
+    "market_open_utc": "2026-04-23T13:30:00+00:00",
+    "market_close_utc": "2026-04-23T20:00:00+00:00",
+    "is_open": true,
+    "is_early_close": false
+  },
+  {
+    "trading_date": "2026-04-24",
+    "market_open_utc": "2026-04-24T13:30:00+00:00",
+    "market_close_utc": "2026-04-24T20:00:00+00:00",
+    "is_open": true,
+    "is_early_close": false
+  }
+]
