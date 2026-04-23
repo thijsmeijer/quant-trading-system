@@ -6,7 +6,7 @@ PYTEST := $(BIN)/pytest
 RUFF := $(BIN)/ruff
 MYPY := $(BIN)/mypy
 
-.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down paper-run paper-burnin-report paper-review
+.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down daily-bars-import paper-run paper-burnin-report paper-review
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -34,6 +34,9 @@ postgres-up:
 
 postgres-down:
 	docker compose down
+
+daily-bars-import:
+	PYTHONPATH=src $(BIN)/python -m quant_core.data.ingestion.daily_bars_cli $(ARGS)
 
 paper-run:
 	PYTHONPATH=src $(BIN)/python -m quant_core.execution.cli $(ARGS)
