@@ -1,0 +1,269 @@
+from __future__ import annotations
+
+import json
+import sys
+from datetime import date, datetime
+from pathlib import Path
+from uuid import uuid4
+
+import psycopg
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+
+from quant_core.data import StrategyRunRepository
+from quant_core.data.bootstrap_cli import main as bootstrap_main
+from quant_core.data.ingestion.daily_bars_cli import main as import_main
+from quant_core.data.ingestion.trading_calendar_cli import main as trading_calendar_main
+from quant_core.execution.cli import main as paper_run_main
+from quant_core.execution.paper_account_cli import main as paper_account_main
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_local_operator_sequence_reaches_burnin_and_review(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from quant_core.dashboard.cli import main as paper_review_main
+    from quant_core.reporting.burnin_cli import main as burnin_main
+
+    database_name = f"quant_core_operator_sequence_{uuid4().hex}"
+    target_url = f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}"
+    universe_path = tmp_path / "universe.yaml"
+    calendar_path = tmp_path / "trading_calendar.json"
+    input_path = tmp_path / "vendor_daily_bars.json"
+    config_path = ROOT / "configs" / "paper_promotion.yaml"
+    _write_universe(universe_path)
+    _write_trading_calendar(calendar_path)
+    _write_vendor_bars(input_path)
+    engine = _create_database(database_name=database_name, target_url=target_url)
+
+    try:
+        bootstrap_exit = bootstrap_main(
+            ["--database-url", target_url, "--universe-path", str(universe_path)]
+        )
+        calendar_exit = trading_calendar_main(
+            ["--database-url", target_url, "--input-json", str(calendar_path)]
+        )
+        account_exit = paper_account_main(
+            [
+                "--database-url",
+                target_url,
+                "--cash",
+                "100000.000000",
+                "--equity",
+                "100000.000000",
+                "--buying-power",
+                "100000.000000",
+                "--as-of",
+                "2026-04-23T20:05:00+00:00",
+            ]
+        )
+        import_exit = import_main(["--database-url", target_url, "--input-json", str(input_path)])
+        paper_exit = paper_run_main(
+            [
+                "--database-url",
+                target_url,
+                "--signal-date",
+                "2026-04-23",
+                "--lookback-bars",
+                "2",
+                "--trend-lookback-bars",
+                "3",
+                "--top-n",
+                "1",
+                "--auto-fill",
+                "--fill-price",
+                "SPY=508.000000",
+            ]
+        )
+        paper_output = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "quant_core.reporting.burnin_cli",
+                "--database-url",
+                target_url,
+                "--config",
+                str(config_path),
+                "--run-mode",
+                "paper",
+                "--limit",
+                "60",
+            ],
+        )
+        burnin_exit = burnin_main()
+        burnin_output = json.loads(capsys.readouterr().out.strip())
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "quant_core.dashboard.cli",
+                "--database-url",
+                target_url,
+                "--config",
+                str(config_path),
+                "--run-mode",
+                "paper",
+                "--burnin-limit",
+                "60",
+            ],
+        )
+        review_exit = paper_review_main()
+        review_output = json.loads(capsys.readouterr().out.strip())
+
+        with Session(engine) as session:
+            latest_run = StrategyRunRepository().latest_run(session, run_mode="paper")
+
+        assert bootstrap_exit == 0
+        assert calendar_exit == 0
+        assert account_exit == 0
+        assert import_exit == 0
+        assert paper_exit == 0
+        assert burnin_exit == 0
+        assert review_exit == 0
+        assert latest_run is not None
+        assert latest_run.execution_date == date(2026, 4, 24)
+        assert paper_output["approved"] is True
+        assert burnin_output["summary"]["total_runs"] == 1
+        assert burnin_output["summary"]["completed_runs"] == 1
+        assert review_output["latest_run"]["signal_date"] == "2026-04-23"
+        assert review_output["latest_run"]["execution_date"] == "2026-04-24"
+        assert review_output["burnin"]["summary"]["total_runs"] == 1
+    finally:
+        _drop_database(engine=engine, database_name=database_name)
+
+
+def _write_universe(path: Path) -> None:
+    path.write_text(
+        """
+version: 1
+as_of: 2026-04-23
+universe:
+  name: core_us_etfs
+  venue: us_equities
+  bar_frequency: daily
+  regular_hours_only: true
+eligibility:
+  min_price: 20
+  min_average_daily_volume: 1000000
+  min_history_days: 252
+  excluded_flags:
+    - leveraged
+    - inverse
+instruments:
+  - symbol: SPY
+    name: SPDR S&P 500 ETF Trust
+    category: broad_us_equity
+    exchange: ARCA
+    is_active: true
+    flags: []
+  - symbol: BND
+    name: Vanguard Total Bond Market ETF
+    category: aggregate_bonds
+    exchange: NASDAQ
+    is_active: true
+    flags: []
+""".strip()
+    )
+
+
+def _write_trading_calendar(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "trading_date": "2026-04-21",
+                    "market_open_utc": "2026-04-21T13:30:00+00:00",
+                    "market_close_utc": "2026-04-21T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-22",
+                    "market_open_utc": "2026-04-22T13:30:00+00:00",
+                    "market_close_utc": "2026-04-22T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-23",
+                    "market_open_utc": "2026-04-23T13:30:00+00:00",
+                    "market_close_utc": "2026-04-23T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+                {
+                    "trading_date": "2026-04-24",
+                    "market_open_utc": "2026-04-24T13:30:00+00:00",
+                    "market_close_utc": "2026-04-24T20:00:00+00:00",
+                    "is_open": True,
+                    "is_early_close": False,
+                },
+            ]
+        )
+    )
+
+
+def _write_vendor_bars(path: Path) -> None:
+    payload: list[dict[str, object]] = []
+    for symbol, prices in {
+        "SPY": ("500.000000", "504.000000", "508.000000"),
+        "BND": ("72.500000", "72.450000", "72.400000"),
+    }.items():
+        for offset, close in enumerate(prices):
+            bar_date = date(2026, 4, 21 + offset)
+            payload.append(
+                {
+                    "symbol": symbol,
+                    "vendor": "test_vendor",
+                    "bar_date": bar_date.isoformat(),
+                    "open": close,
+                    "high": close,
+                    "low": close,
+                    "close": close,
+                    "adjusted_close": close,
+                    "volume": 1_000_000,
+                    "fetched_at": datetime(2026, 4, 23, 20, 0).isoformat() + "+00:00",
+                    "source_payload": {
+                        "symbol": symbol,
+                        "bar_date": bar_date.isoformat(),
+                        "close": close,
+                    },
+                }
+            )
+    path.write_text(json.dumps(payload))
+
+
+def _create_database(*, database_name: str, target_url: str) -> Engine:
+    del target_url
+    with psycopg.connect(
+        "postgresql://quant:quant@127.0.0.1:5432/postgres",
+        autocommit=True,
+    ) as connection:
+        connection.execute(f'CREATE DATABASE "{database_name}"')
+
+    return create_engine(f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}")
+
+
+def _drop_database(*, engine: Engine, database_name: str) -> None:
+    engine.dispose()
+    with psycopg.connect(
+        "postgresql://quant:quant@127.0.0.1:5432/postgres",
+        autocommit=True,
+    ) as connection:
+        connection.execute(
+            f"""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = '{database_name}'
+              AND pid <> pg_backend_pid()
+            """
+        )
+        connection.execute(f'DROP DATABASE IF EXISTS "{database_name}"')
