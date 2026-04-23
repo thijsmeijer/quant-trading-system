@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
+quant-local-bootstrap = "quant_core.data.bootstrap_cli:main"
 quant-daily-bars-import = "quant_core.data.ingestion.daily_bars_cli:main"
 quant-paper-run = "quant_core.execution.cli:main"
 quant-paper-burnin-report = "quant_core.reporting.burnin_cli:main"
