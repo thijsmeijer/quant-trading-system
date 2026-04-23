@@ -5,6 +5,12 @@ from quant_core.reporting.audit import (
     ExecutionAuditSummary,
     build_execution_audit_summary,
 )
+from quant_core.reporting.burnin import (
+    BurnInReport,
+    BurnInRunRow,
+    BurnInSummary,
+    build_burnin_report,
+)
 from quant_core.reporting.data_quality import (
     DailyDataQualityReport,
     DailyDataQualityReportBuilder,
@@ -27,6 +33,9 @@ from quant_core.reporting.readiness import (
 )
 
 __all__ = [
+    "BurnInReport",
+    "BurnInRunRow",
+    "BurnInSummary",
     "DailyDataQualityReport",
     "DailyDataQualityReportBuilder",
     "DailyDataQualityReportService",
@@ -37,6 +46,7 @@ __all__ = [
     "ExecutionReportSummary",
     "PaperRunReport",
     "PaperRunComparison",
+    "build_burnin_report",
     "build_execution_audit_summary",
     "build_execution_report_summary",
     "build_paper_run_report",

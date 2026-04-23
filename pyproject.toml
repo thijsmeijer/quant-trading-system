@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 quant-paper-run = "quant_core.execution.cli:main"
+quant-paper-burnin-report = "quant_core.reporting.burnin_cli:main"
 
 [project.optional-dependencies]
 dev = [

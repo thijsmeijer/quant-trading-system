@@ -432,6 +432,29 @@ class StrategyRunRepository:
             return None
         return _strategy_run_from_model(model)
 
+    def list_runs(
+        self,
+        session: Session,
+        *,
+        run_mode: RunMode,
+        limit: int | None = None,
+        statuses: Sequence[str] | None = None,
+    ) -> tuple[StoredStrategyRun, ...]:
+        """List persisted runs for one environment ordered newest first."""
+
+        query = (
+            select(StrategyRun)
+            .where(StrategyRun.run_mode == run_mode)
+            .order_by(StrategyRun.started_at.desc(), StrategyRun.id.desc())
+        )
+        if statuses is not None:
+            query = query.where(StrategyRun.status.in_(list(statuses)))
+        if limit is not None:
+            query = query.limit(limit)
+
+        models = session.execute(query).scalars().all()
+        return tuple(_strategy_run_from_model(model) for model in models)
+
     def count_runs(
         self,
         session: Session,
