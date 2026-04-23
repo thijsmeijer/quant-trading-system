@@ -11,11 +11,14 @@ from quant_core.dashboard.readiness import (
     PromotionReadinessService,
     PromotionReadinessSummary,
 )
+from quant_core.dashboard.review import PaperOperatorReview, PaperOperatorReviewService
 
 __all__ = [
     "BurnInReportService",
     "OperationsOverview",
     "OperationsOverviewService",
+    "PaperOperatorReview",
+    "PaperOperatorReviewService",
     "PromotionReadinessService",
     "PromotionReadinessSummary",
     "ServiceHealthCheck",

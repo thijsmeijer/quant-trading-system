@@ -8,6 +8,7 @@ Phase 6 is a sustained paper-trading burn-in from your local environment. The ob
 - local Python environment through `.venv`
 - the paper workflow command
 - the burn-in review command
+- the operator review command
 
 ## U.S. Session Timing
 
@@ -55,14 +56,20 @@ make paper-run ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5
 make paper-burnin-report ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --config configs/paper_promotion.yaml --run-mode paper --limit 60"
 ```
 
-4. Check what matters after every run:
+4. Run the operator review command.
+
+```bash
+make paper-review ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --config configs/paper_promotion.yaml --run-mode paper --burnin-limit 60"
+```
+
+5. Check what matters after every run:
    - latest run completed cleanly
    - no new critical incidents
    - no reconciliation critical rows
    - latest run still inside modeled expectation
    - anomaly count is not increasing in a repeating pattern
 
-5. If there is a critical incident, do not treat the run as healthy just because the command completed.
+6. If there is a critical incident, do not treat the run as healthy just because the command completed.
 
 ## Weekly Review Checklist
 

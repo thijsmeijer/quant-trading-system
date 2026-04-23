@@ -6,7 +6,7 @@ PYTEST := $(BIN)/pytest
 RUFF := $(BIN)/ruff
 MYPY := $(BIN)/mypy
 
-.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down paper-run paper-burnin-report
+.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down paper-run paper-burnin-report paper-review
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -40,3 +40,6 @@ paper-run:
 
 paper-burnin-report:
 	PYTHONPATH=src $(BIN)/python -m quant_core.reporting.burnin_cli $(ARGS)
+
+paper-review:
+	PYTHONPATH=src $(BIN)/python -m quant_core.dashboard.cli $(ARGS)
