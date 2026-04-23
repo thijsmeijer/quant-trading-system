@@ -18,6 +18,7 @@ from quant_core.execution.paper_run import (
     PaperRunSummary,
     PaperRunTimestamps,
 )
+from quant_core.research import PersistedResearchDatasetLoader
 from quant_core.research.daily_bars import ResearchDailyBar, ResearchDataset
 from quant_core.risk import PreTradeRiskConfig
 from quant_core.strategy import MomentumStrategyConfig
@@ -30,7 +31,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     timestamps = _default_timestamps()
     summary = run_paper_run(
         database_url=args.database_url,
-        bars_json=Path(args.bars_json),
+        bars_json=(Path(args.bars_json) if args.bars_json is not None else None),
         signal_date=date.fromisoformat(args.signal_date),
         strategy_config=MomentumStrategyConfig(
             version=args.strategy_version,
@@ -55,7 +56,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 def run_paper_run(
     *,
     database_url: str,
-    bars_json: Path,
+    bars_json: Path | None,
     signal_date: date,
     strategy_config: MomentumStrategyConfig,
     risk_config: PreTradeRiskConfig,
@@ -65,10 +66,14 @@ def run_paper_run(
 ) -> PaperRunSummary:
     """Execute one paper run against a target database."""
 
-    dataset = _load_dataset(bars_json)
     engine = create_engine(database_url)
     try:
         with Session(engine) as session:
+            dataset, execution_date = _load_runtime_inputs(
+                session,
+                signal_date=signal_date,
+                bars_json=bars_json,
+            )
             summary = PaperRunOrchestrator(
                 broker=FakeBrokerGateway(
                     auto_fill=auto_fill,
@@ -78,6 +83,7 @@ def run_paper_run(
                 session,
                 dataset=dataset,
                 signal_date=signal_date,
+                execution_date=execution_date,
                 strategy_config=strategy_config,
                 risk_config=risk_config,
                 timestamps=timestamps,
@@ -91,7 +97,7 @@ def run_paper_run(
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run one deterministic paper ETF workflow.")
     parser.add_argument("--database-url", required=True)
-    parser.add_argument("--bars-json", required=True)
+    parser.add_argument("--bars-json")
     parser.add_argument("--signal-date", required=True)
     parser.add_argument("--strategy-version", default="v1")
     parser.add_argument("--lookback-bars", type=int, default=90)
@@ -109,6 +115,22 @@ def _build_parser() -> argparse.ArgumentParser:
 def _load_dataset(path: Path) -> ResearchDataset:
     payload = json.loads(path.read_text())
     return ResearchDataset.from_bars([ResearchDailyBar.model_validate(item) for item in payload])
+
+
+def _load_runtime_inputs(
+    session: Session,
+    *,
+    signal_date: date,
+    bars_json: Path | None,
+) -> tuple[ResearchDataset, date | None]:
+    if bars_json is not None:
+        return _load_dataset(bars_json), None
+
+    loaded = PersistedResearchDatasetLoader().load_for_signal_date(
+        session,
+        signal_date=signal_date,
+    )
+    return loaded.dataset, loaded.execution_date
 
 
 def _parse_fill_prices(items: Sequence[str]) -> dict[str, Decimal]:

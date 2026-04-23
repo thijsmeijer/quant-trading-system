@@ -47,8 +47,10 @@ make postgres-up
 2. Run the daily paper workflow.
 
 ```bash
-make paper-run ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --bars-json /absolute/path/to/daily_bars.json --signal-date 2026-04-24 --auto-fill --fill-price SPY=508.000000"
+make paper-run ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --signal-date 2026-04-24 --auto-fill --fill-price SPY=508.000000"
 ```
+
+If you need a fixture-driven run for deterministic testing, `--bars-json /absolute/path/to/daily_bars.json` is still supported. The normal operator path should use persisted PostgreSQL bars.
 
 3. Review the latest burn-in summary.
 

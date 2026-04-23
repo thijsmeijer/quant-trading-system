@@ -88,6 +88,7 @@ class PaperRunOrchestrator:
         *,
         dataset: ResearchDataset,
         signal_date: date,
+        execution_date: date | None = None,
         strategy_config: MomentumStrategyConfig,
         risk_config: PreTradeRiskConfig,
         timestamps: PaperRunTimestamps,
@@ -101,6 +102,7 @@ class PaperRunOrchestrator:
             run_mode="paper",
             config=strategy_config,
             started_at=timestamps.strategy_started_at,
+            execution_date=execution_date,
         )
         self._target_position_builder.build_for_strategy_run(
             session,
