@@ -32,6 +32,11 @@ from quant_core.execution.paper_run import (
     PaperRunSummary,
     PaperRunTimestamps,
 )
+from quant_core.execution.preflight import (
+    PaperRunDataQualityError,
+    PaperRunPreflightResult,
+    PaperRunPreflightService,
+)
 from quant_core.execution.state import (
     OperationalStateRefresher,
     RefreshedOperationalState,
@@ -47,7 +52,10 @@ __all__ = [
     "OperationalStateRefresher",
     "PaperExecutionOrder",
     "PaperExecutionStatus",
+    "PaperRunDataQualityError",
     "PaperRunOrchestrator",
+    "PaperRunPreflightResult",
+    "PaperRunPreflightService",
     "PaperRunSummary",
     "PaperRunTimestamps",
     "RejectedTargetForExecutionError",

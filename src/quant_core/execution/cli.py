@@ -18,6 +18,7 @@ from quant_core.execution.paper_run import (
     PaperRunSummary,
     PaperRunTimestamps,
 )
+from quant_core.execution.preflight import PaperRunDataQualityError, PaperRunPreflightService
 from quant_core.research import PersistedResearchDatasetLoader
 from quant_core.research.daily_bars import ResearchDailyBar, ResearchDataset
 from quant_core.risk import PreTradeRiskConfig
@@ -33,6 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         database_url=args.database_url,
         bars_json=(Path(args.bars_json) if args.bars_json is not None else None),
         signal_date=date.fromisoformat(args.signal_date),
+        universe_path=Path(args.universe_path),
         strategy_config=MomentumStrategyConfig(
             version=args.strategy_version,
             lookback_bars=args.lookback_bars,
@@ -58,6 +60,7 @@ def run_paper_run(
     database_url: str,
     bars_json: Path | None,
     signal_date: date,
+    universe_path: Path,
     strategy_config: MomentumStrategyConfig,
     risk_config: PreTradeRiskConfig,
     timestamps: PaperRunTimestamps,
@@ -69,27 +72,33 @@ def run_paper_run(
     engine = create_engine(database_url)
     try:
         with Session(engine) as session:
-            dataset, execution_date = _load_runtime_inputs(
-                session,
-                signal_date=signal_date,
-                bars_json=bars_json,
-            )
-            summary = PaperRunOrchestrator(
-                broker=FakeBrokerGateway(
-                    auto_fill=auto_fill,
-                    fill_price_by_symbol=fill_price_by_symbol,
+            try:
+                dataset, execution_date = _load_runtime_inputs(
+                    session,
+                    signal_date=signal_date,
+                    bars_json=bars_json,
+                    universe_path=universe_path,
+                    occurred_at=timestamps.strategy_started_at,
                 )
-            ).run(
-                session,
-                dataset=dataset,
-                signal_date=signal_date,
-                execution_date=execution_date,
-                strategy_config=strategy_config,
-                risk_config=risk_config,
-                timestamps=timestamps,
-            )
-            session.commit()
-            return summary
+                summary = PaperRunOrchestrator(
+                    broker=FakeBrokerGateway(
+                        auto_fill=auto_fill,
+                        fill_price_by_symbol=fill_price_by_symbol,
+                    )
+                ).run(
+                    session,
+                    dataset=dataset,
+                    signal_date=signal_date,
+                    execution_date=execution_date,
+                    strategy_config=strategy_config,
+                    risk_config=risk_config,
+                    timestamps=timestamps,
+                )
+                session.commit()
+                return summary
+            except PaperRunDataQualityError:
+                session.commit()
+                raise
     finally:
         engine.dispose()
 
@@ -99,6 +108,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--database-url", required=True)
     parser.add_argument("--bars-json")
     parser.add_argument("--signal-date", required=True)
+    parser.add_argument("--universe-path", default="configs/universe.yaml")
     parser.add_argument("--strategy-version", default="v1")
     parser.add_argument("--lookback-bars", type=int, default=90)
     parser.add_argument("--trend-lookback-bars", type=int, default=200)
@@ -122,10 +132,18 @@ def _load_runtime_inputs(
     *,
     signal_date: date,
     bars_json: Path | None,
+    universe_path: Path,
+    occurred_at: datetime,
 ) -> tuple[ResearchDataset, date | None]:
     if bars_json is not None:
         return _load_dataset(bars_json), None
 
+    PaperRunPreflightService().validate_for_paper_run(
+        session,
+        universe_path=universe_path,
+        signal_date=signal_date,
+        occurred_at=occurred_at,
+    )
     loaded = PersistedResearchDatasetLoader().load_for_signal_date(
         session,
         signal_date=signal_date,

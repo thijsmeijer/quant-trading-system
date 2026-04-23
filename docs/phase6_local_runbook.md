@@ -52,6 +52,8 @@ make paper-run ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5
 
 If you need a fixture-driven run for deterministic testing, `--bars-json /absolute/path/to/daily_bars.json` is still supported. The normal operator path should use persisted PostgreSQL bars.
 
+The normal database-backed path validates persisted market data before strategy execution. If daily bars are missing, stale, duplicated, or fail price-sanity checks, the run will stop and record an operator-visible incident instead of placing paper orders.
+
 3. Review the latest burn-in summary.
 
 ```bash

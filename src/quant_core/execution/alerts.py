@@ -75,10 +75,10 @@ class OperationalAlertService:
     ) -> tuple[StoredIncident, ...]:
         """Create stale-data incidents from a daily data-quality report."""
 
-        if not report.missing_symbols and not report.stale_symbols:
+        if not report.failing_symbols:
             return ()
 
-        severity = "critical" if report.stale_symbols else "warning"
+        severity = "critical"
         incident = self._incident_repository.create_incident(
             session,
             IncidentWrite(
@@ -86,11 +86,13 @@ class OperationalAlertService:
                 incident_type="stale_data",
                 severity=severity,
                 status="open",
-                summary="latest expected ETF data is missing or stale",
+                summary="persisted ETF market data failed validation",
                 occurred_at=occurred_at,
                 details={
                     "checked_as_of": report.checked_as_of.isoformat(),
+                    "duplicate_symbols": list(report.duplicate_symbols),
                     "missing_symbols": list(report.missing_symbols),
+                    "price_sanity_symbols": list(report.price_sanity_symbols),
                     "stale_symbols": list(report.stale_symbols),
                 },
             ),

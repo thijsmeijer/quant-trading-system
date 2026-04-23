@@ -15,9 +15,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from quant_core.data import AccountSnapshotWrite, SnapshotRepository, StrategyRunRepository
+from quant_core.data import (
+    AccountSnapshotWrite,
+    IncidentRepository,
+    SnapshotRepository,
+    StrategyRunRepository,
+)
 from quant_core.data.models import BarsDaily, Instrument, RawBarsDaily, TradingCalendar
 from quant_core.execution.cli import main
+from quant_core.execution.preflight import PaperRunDataQualityError
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -79,6 +85,59 @@ def test_paper_run_cli_can_load_persisted_bars_without_json(
         _drop_database(engine=engine, database_name=database_name)
 
 
+def test_paper_run_cli_blocks_when_persisted_data_fails_validation() -> None:
+    database_name = f"quant_core_paper_cli_invalid_{uuid4().hex}"
+    target_url = f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}"
+    engine = _migrated_engine(database_name=database_name, target_url=target_url)
+
+    try:
+        with Session(engine) as session:
+            _seed_instruments(session)
+            _seed_bars(session, omit_latest_for=("BND",))
+            _seed_calendar(session)
+            SnapshotRepository().store_account_snapshot(
+                session,
+                AccountSnapshotWrite(
+                    run_mode="paper",
+                    cash=Decimal("100000.000000"),
+                    equity=Decimal("100000.000000"),
+                    buying_power=Decimal("100000.000000"),
+                    as_of=datetime(2026, 4, 22, 20, 1, tzinfo=UTC),
+                ),
+            )
+            session.commit()
+
+        with pytest.raises(PaperRunDataQualityError):
+            main(
+                [
+                    "--database-url",
+                    target_url,
+                    "--signal-date",
+                    "2026-04-22",
+                    "--lookback-bars",
+                    "2",
+                    "--trend-lookback-bars",
+                    "3",
+                    "--top-n",
+                    "1",
+                    "--auto-fill",
+                    "--fill-price",
+                    "SPY=508.000000",
+                ]
+            )
+
+        with Session(engine) as session:
+            latest_run = StrategyRunRepository().latest_run(session, run_mode="paper")
+            incidents = IncidentRepository().list_open_incidents(session, run_mode="paper")
+            session.commit()
+
+        assert latest_run is None
+        assert len(incidents) == 1
+        assert incidents[0].incident_type == "stale_data"
+    finally:
+        _drop_database(engine=engine, database_name=database_name)
+
+
 def _seed_instruments(session: Session) -> None:
     session.add_all(
         [
@@ -101,7 +160,7 @@ def _seed_instruments(session: Session) -> None:
     session.commit()
 
 
-def _seed_bars(session: Session) -> None:
+def _seed_bars(session: Session, *, omit_latest_for: tuple[str, ...] = ()) -> None:
     instruments = {
         instrument.symbol: instrument.id for instrument in session.query(Instrument).all()
     }
@@ -111,6 +170,8 @@ def _seed_bars(session: Session) -> None:
     }.items():
         for offset, close in enumerate(prices):
             bar_date = date(2026, 4, 20 + offset)
+            if offset == 2 and symbol in omit_latest_for:
+                continue
             raw_bar = RawBarsDaily(
                 instrument_id=instruments[symbol],
                 vendor="test_vendor",
@@ -138,14 +199,37 @@ def _seed_bars(session: Session) -> None:
 
 
 def _seed_calendar(session: Session) -> None:
-    session.add(
-        TradingCalendar(
-            trading_date=date(2026, 4, 23),
-            market_open_utc=datetime(2026, 4, 23, 13, 30, tzinfo=UTC),
-            market_close_utc=datetime(2026, 4, 23, 20, 0, tzinfo=UTC),
-            is_open=True,
-            is_early_close=False,
-        )
+    session.add_all(
+        [
+            TradingCalendar(
+                trading_date=date(2026, 4, 20),
+                market_open_utc=datetime(2026, 4, 20, 13, 30, tzinfo=UTC),
+                market_close_utc=datetime(2026, 4, 20, 20, 0, tzinfo=UTC),
+                is_open=True,
+                is_early_close=False,
+            ),
+            TradingCalendar(
+                trading_date=date(2026, 4, 21),
+                market_open_utc=datetime(2026, 4, 21, 13, 30, tzinfo=UTC),
+                market_close_utc=datetime(2026, 4, 21, 20, 0, tzinfo=UTC),
+                is_open=True,
+                is_early_close=False,
+            ),
+            TradingCalendar(
+                trading_date=date(2026, 4, 22),
+                market_open_utc=datetime(2026, 4, 22, 13, 30, tzinfo=UTC),
+                market_close_utc=datetime(2026, 4, 22, 20, 0, tzinfo=UTC),
+                is_open=True,
+                is_early_close=False,
+            ),
+            TradingCalendar(
+                trading_date=date(2026, 4, 23),
+                market_open_utc=datetime(2026, 4, 23, 13, 30, tzinfo=UTC),
+                market_close_utc=datetime(2026, 4, 23, 20, 0, tzinfo=UTC),
+                is_open=True,
+                is_early_close=False,
+            ),
+        ]
     )
     session.commit()
 
