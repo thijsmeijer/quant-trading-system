@@ -58,7 +58,15 @@ make trading-calendar-import ARGS="--database-url postgresql+psycopg://quant:qua
 
 The input file must be a JSON array of canonical trading-calendar rows with `trading_date`, `market_open_utc`, `market_close_utc`, `is_open`, and optional `is_early_close`. Timestamps must be timezone-aware and will be normalized to UTC.
 
-4. Import the latest daily bars.
+4. Seed the initial paper account state.
+
+```bash
+make paper-account-bootstrap ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --cash 100000.000000 --equity 100000.000000 --buying-power 100000.000000 --as-of 2026-04-23T20:05:00+00:00"
+```
+
+Use an explicit timezone-aware `as_of` timestamp. Rerunning the same command for the same timestamp updates the same paper snapshot instead of creating duplicate state.
+
+5. Import the latest daily bars.
 
 ```bash
 make daily-bars-import ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --input-json /absolute/path/to/vendor_daily_bars.json"
@@ -66,7 +74,7 @@ make daily-bars-import ARGS="--database-url postgresql+psycopg://quant:quant@127
 
 The import file should be a JSON array of `VendorDailyBar`-shaped objects with `symbol`, `vendor`, `bar_date`, `open`, `high`, `low`, `close`, `adjusted_close`, `volume`, `fetched_at`, and `source_payload`.
 
-5. Run the daily paper workflow.
+6. Run the daily paper workflow.
 
 ```bash
 make paper-run ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --signal-date 2026-04-24 --auto-fill --fill-price SPY=508.000000"
@@ -76,26 +84,26 @@ If you need a fixture-driven run for deterministic testing, `--bars-json /absolu
 
 The normal database-backed path validates persisted market data before strategy execution. If daily bars are missing, stale, duplicated, or fail price-sanity checks, the run will stop and record an operator-visible incident instead of placing paper orders.
 
-6. Review the latest burn-in summary.
+7. Review the latest burn-in summary.
 
 ```bash
 make paper-burnin-report ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --config configs/paper_promotion.yaml --run-mode paper --limit 60"
 ```
 
-7. Run the operator review command.
+8. Run the operator review command.
 
 ```bash
 make paper-review ARGS="--database-url postgresql+psycopg://quant:quant@127.0.0.1:5432/quant_core --config configs/paper_promotion.yaml --run-mode paper --burnin-limit 60"
 ```
 
-8. Check what matters after every run:
+9. Check what matters after every run:
    - latest run completed cleanly
    - no new critical incidents
    - no reconciliation critical rows
    - latest run still inside modeled expectation
    - anomaly count is not increasing in a repeating pattern
 
-9. If there is a critical incident, do not treat the run as healthy just because the command completed.
+10. If there is a critical incident, do not treat the run as healthy just because the command completed.
 
 ## Weekly Review Checklist
 

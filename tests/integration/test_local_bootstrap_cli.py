@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, date, datetime
-from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -12,12 +11,13 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from quant_core.data import AccountSnapshotWrite, SnapshotRepository, StrategyRunRepository
+from quant_core.data import StrategyRunRepository
 from quant_core.data.bootstrap_cli import main as bootstrap_main
 from quant_core.data.ingestion.daily_bars_cli import main as import_main
 from quant_core.data.ingestion.trading_calendar_cli import main as trading_calendar_main
 from quant_core.data.models import Instrument
 from quant_core.execution.cli import main as paper_run_main
+from quant_core.execution.paper_account_cli import main as paper_account_main
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -76,18 +76,20 @@ def test_local_bootstrap_can_prepare_instruments_for_import_and_paper_run(
             ["--database-url", target_url, "--input-json", str(calendar_path)]
         )
 
-        with Session(engine) as session:
-            SnapshotRepository().store_account_snapshot(
-                session,
-                AccountSnapshotWrite(
-                    run_mode="paper",
-                    cash=Decimal("100000.000000"),
-                    equity=Decimal("100000.000000"),
-                    buying_power=Decimal("100000.000000"),
-                    as_of=datetime(2026, 4, 22, 20, 1, tzinfo=UTC),
-                ),
-            )
-            session.commit()
+        account_exit = paper_account_main(
+            [
+                "--database-url",
+                target_url,
+                "--cash",
+                "100000.000000",
+                "--equity",
+                "100000.000000",
+                "--buying-power",
+                "100000.000000",
+                "--as-of",
+                "2026-04-22T20:01:00+00:00",
+            ]
+        )
 
         import_exit = import_main(["--database-url", target_url, "--input-json", str(input_path)])
         paper_exit = paper_run_main(
@@ -115,6 +117,7 @@ def test_local_bootstrap_can_prepare_instruments_for_import_and_paper_run(
 
         assert bootstrap_exit == 0
         assert calendar_exit == 0
+        assert account_exit == 0
         assert import_exit == 0
         assert paper_exit == 0
         assert output["approved"] is True

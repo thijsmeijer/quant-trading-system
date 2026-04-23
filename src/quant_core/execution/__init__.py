@@ -27,6 +27,11 @@ from quant_core.execution.paper import (
     create_paper_execution_order,
     transition_paper_execution_order,
 )
+from quant_core.execution.paper_account import (
+    InvalidPaperAccountBootstrapError,
+    PaperAccountBootstrapInput,
+    PaperAccountBootstrapService,
+)
 from quant_core.execution.paper_run import (
     PaperRunOrchestrator,
     PaperRunSummary,
@@ -47,9 +52,12 @@ __all__ = [
     "ExecutionOrderCandidate",
     "IdentifiedTradeIntent",
     "InvalidPaperExecutionTransitionError",
+    "InvalidPaperAccountBootstrapError",
     "OperationalAlertService",
     "OrderManagementService",
     "OperationalStateRefresher",
+    "PaperAccountBootstrapInput",
+    "PaperAccountBootstrapService",
     "PaperExecutionOrder",
     "PaperExecutionStatus",
     "PaperRunDataQualityError",
