@@ -66,3 +66,7 @@ def _parse_bar(item: object) -> VendorDailyBar:
         fetched_at=datetime.fromisoformat(str(item["fetched_at"])),
         source_payload=source_payload,
     )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

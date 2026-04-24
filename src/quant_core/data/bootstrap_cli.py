@@ -96,3 +96,7 @@ class LocalBootstrapService:
                 os.environ.pop("DATABASE_URL", None)
             else:
                 os.environ["DATABASE_URL"] = previous_url
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

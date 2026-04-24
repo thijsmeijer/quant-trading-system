@@ -16,10 +16,13 @@ dependencies = [
 
 [project.scripts]
 quant-local-bootstrap = "quant_core.data.bootstrap_cli:main"
+quant-trading-calendar-fetch = "quant_core.data.ingestion.alpaca_trading_calendar_cli:main"
+quant-daily-bars-fetch = "quant_core.data.ingestion.alpaca_daily_bars_cli:main"
 quant-daily-bars-import = "quant_core.data.ingestion.daily_bars_cli:main"
 quant-paper-run = "quant_core.execution.cli:main"
 quant-paper-burnin-report = "quant_core.reporting.burnin_cli:main"
 quant-paper-review = "quant_core.dashboard.cli:main"
+quant-paper-performance-report = "quant_core.reporting.paper_performance_cli:main"
 
 [project.optional-dependencies]
 dev = [

@@ -110,6 +110,58 @@ def test_daily_bar_import_cli_can_feed_database_backed_paper_run(
         _drop_database(engine=engine, database_name=database_name)
 
 
+def test_alpaca_fetch_output_shape_imports_and_feeds_paper_run(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    database_name = f"quant_core_alpaca_shape_{uuid4().hex}"
+    target_url = f"postgresql+psycopg://quant:quant@127.0.0.1:5432/{database_name}"
+    engine = _migrated_engine(database_name=database_name, target_url=target_url)
+    input_path = tmp_path / "alpaca_daily_bars.json"
+    _write_alpaca_fetch_output_bars(input_path)
+
+    try:
+        with Session(engine) as session:
+            _seed_instruments(session)
+            _seed_calendar(session)
+            SnapshotRepository().store_account_snapshot(
+                session,
+                AccountSnapshotWrite(
+                    run_mode="paper",
+                    cash=Decimal("100000.000000"),
+                    equity=Decimal("100000.000000"),
+                    buying_power=Decimal("100000.000000"),
+                    as_of=datetime(2026, 4, 22, 20, 1, tzinfo=UTC),
+                ),
+            )
+            session.commit()
+
+        import_exit = import_main(["--database-url", target_url, "--input-json", str(input_path)])
+        paper_exit = paper_run_main(
+            [
+                "--database-url",
+                target_url,
+                "--signal-date",
+                "2026-04-22",
+                "--lookback-bars",
+                "2",
+                "--trend-lookback-bars",
+                "3",
+                "--top-n",
+                "1",
+                "--auto-fill",
+            ]
+        )
+        output = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+
+        assert import_exit == 0
+        assert paper_exit == 0
+        assert output["approved"] is True
+        assert output["incident_count"] == 0
+    finally:
+        _drop_database(engine=engine, database_name=database_name)
+
+
 def _write_vendor_bars(path: Path) -> None:
     payload: list[dict[str, object]] = []
     for symbol, prices in {
@@ -134,6 +186,35 @@ def _write_vendor_bars(path: Path) -> None:
                         "symbol": symbol,
                         "bar_date": bar_date.isoformat(),
                         "close": close,
+                    },
+                }
+            )
+    path.write_text(json.dumps(payload))
+
+
+def _write_alpaca_fetch_output_bars(path: Path) -> None:
+    payload: list[dict[str, object]] = []
+    for symbol, prices in {
+        "SPY": ("500.000000", "504.000000", "508.000000"),
+        "BND": ("72.500000", "72.450000", "72.400000"),
+    }.items():
+        for offset, close in enumerate(prices):
+            bar_date = date(2026, 4, 20 + offset)
+            payload.append(
+                {
+                    "symbol": symbol,
+                    "vendor": "alpaca",
+                    "bar_date": bar_date.isoformat(),
+                    "open": close,
+                    "high": close,
+                    "low": close,
+                    "close": close,
+                    "adjusted_close": close,
+                    "volume": 1_000_000,
+                    "fetched_at": datetime(2026, 4, 22, 20, 0, tzinfo=UTC).isoformat(),
+                    "source_payload": {
+                        "adjustment": "all",
+                        "alpaca_bar": {"c": close},
                     },
                 }
             )

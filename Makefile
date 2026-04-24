@@ -6,7 +6,7 @@ PYTEST := $(BIN)/pytest
 RUFF := $(BIN)/ruff
 MYPY := $(BIN)/mypy
 
-.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down local-bootstrap trading-calendar-import paper-account-bootstrap daily-bars-import paper-run paper-burnin-report paper-review
+.PHONY: venv install test lint format-check type-check verify postgres-up postgres-down local-bootstrap trading-calendar-fetch trading-calendar-import paper-account-bootstrap daily-bars-fetch daily-bars-import paper-run paper-burnin-report paper-review paper-performance-report
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -38,11 +38,17 @@ postgres-down:
 local-bootstrap:
 	PYTHONPATH=src $(BIN)/python -m quant_core.data.bootstrap_cli $(ARGS)
 
+trading-calendar-fetch:
+	PYTHONPATH=src $(BIN)/python -m quant_core.data.ingestion.alpaca_trading_calendar_cli $(ARGS)
+
 trading-calendar-import:
 	PYTHONPATH=src $(BIN)/python -m quant_core.data.ingestion.trading_calendar_cli $(ARGS)
 
 paper-account-bootstrap:
 	PYTHONPATH=src $(BIN)/python -m quant_core.execution.paper_account_cli $(ARGS)
+
+daily-bars-fetch:
+	PYTHONPATH=src $(BIN)/python -m quant_core.data.ingestion.alpaca_daily_bars_cli $(ARGS)
 
 daily-bars-import:
 	PYTHONPATH=src $(BIN)/python -m quant_core.data.ingestion.daily_bars_cli $(ARGS)
@@ -55,3 +61,6 @@ paper-burnin-report:
 
 paper-review:
 	PYTHONPATH=src $(BIN)/python -m quant_core.dashboard.cli $(ARGS)
+
+paper-performance-report:
+	PYTHONPATH=src $(BIN)/python -m quant_core.reporting.paper_performance_cli $(ARGS)
