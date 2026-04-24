@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -132,6 +133,12 @@ class PaperRunOrchestrator:
                 strategy_run_id=persisted_strategy.run.id,
                 run_mode="paper",
                 created_at=timestamps.orders_created_at,
+                current_market_values=_current_market_values_from_dataset(
+                    session=session,
+                    snapshots=self._snapshot_repository,
+                    dataset=dataset,
+                    signal_date=signal_date,
+                ),
             )
             self._oms.submit_orders(
                 session,
@@ -215,3 +222,20 @@ class PaperRunOrchestrator:
             reconciliation_critical_rows=paper_run_report.reconciliation_critical_rows,
             incident_count=paper_run_report.open_incident_count,
         )
+
+
+def _current_market_values_from_dataset(
+    *,
+    session: Session,
+    snapshots: SnapshotRepository,
+    dataset: ResearchDataset,
+    signal_date: date,
+) -> dict[str, Decimal]:
+    latest_prices = dataset.history_up_to(signal_date).latest_adjusted_closes()
+    return {
+        position.symbol: (position.quantity * latest_prices[position.symbol]).quantize(
+            Decimal("0.000001")
+        )
+        for position in snapshots.latest_positions(session, run_mode="paper")
+        if position.symbol in latest_prices
+    }

@@ -38,3 +38,19 @@ def test_build_execution_order_candidates_uses_target_minus_current_quantities()
         ("GLD", "SELL", Decimal("5.000000")),
         ("SPY", "BUY", Decimal("10.000000")),
     ]
+
+
+def test_build_execution_order_candidates_prices_full_exits_from_current_market_value() -> None:
+    candidates = build_execution_order_candidates(
+        strategy_run_id=42,
+        target_positions=(),
+        current_positions=(("SHY", Decimal("404.137973")),),
+        current_market_values={"SHY": Decimal("33333.300000")},
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0].symbol == "SHY"
+    assert candidates[0].side == "SELL"
+    assert candidates[0].quantity == Decimal("404.137973")
+    assert candidates[0].reference_price == Decimal("82.480000")
+    assert candidates[0].notional == Decimal("33333.300013")

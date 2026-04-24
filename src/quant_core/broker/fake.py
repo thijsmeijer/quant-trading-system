@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -26,6 +27,7 @@ class FakeBrokerGateway(BrokerGateway):
     rejection_symbols: set[str] = field(default_factory=set)
     fill_price_by_symbol: dict[str, Decimal] = field(default_factory=dict)
     starting_cash: Decimal = Decimal("100000.000000")
+    starting_positions: Mapping[str, tuple[Decimal, Decimal]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self._order_count = 0
@@ -33,8 +35,14 @@ class FakeBrokerGateway(BrokerGateway):
         self._orders_by_idempotency: dict[str, BrokerSubmission] = {}
         self._orders_by_broker_id: dict[str, BrokerOrder] = {}
         self._fills_by_id: dict[str, BrokerFill] = {}
-        self._positions: dict[str, Decimal] = {}
-        self._market_values: dict[str, Decimal] = {}
+        self._positions: dict[str, Decimal] = {
+            symbol: quantity.quantize(Decimal("0.000001"))
+            for symbol, (quantity, _market_value) in self.starting_positions.items()
+        }
+        self._market_values: dict[str, Decimal] = {
+            symbol: market_value.quantize(Decimal("0.000001"))
+            for symbol, (_quantity, market_value) in self.starting_positions.items()
+        }
         self._cash = self.starting_cash
         self._updated_at = datetime.now(tz=UTC)
 

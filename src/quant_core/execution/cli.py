@@ -13,6 +13,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from quant_core.broker import FakeBrokerGateway
+from quant_core.data import SnapshotRepository, StoredPositionSnapshot
 from quant_core.execution.paper_run import (
     PaperRunOrchestrator,
     PaperRunSummary,
@@ -80,12 +81,14 @@ def run_paper_run(
                     universe_path=universe_path,
                     occurred_at=timestamps.strategy_started_at,
                 )
-                summary = PaperRunOrchestrator(
-                    broker=FakeBrokerGateway(
-                        auto_fill=auto_fill,
-                        fill_price_by_symbol=fill_price_by_symbol,
-                    )
-                ).run(
+                broker = _build_fake_broker(
+                    session,
+                    dataset=dataset,
+                    signal_date=signal_date,
+                    auto_fill=auto_fill,
+                    fill_price_by_symbol=fill_price_by_symbol,
+                )
+                summary = PaperRunOrchestrator(broker=broker).run(
                     session,
                     dataset=dataset,
                     signal_date=signal_date,
@@ -159,6 +162,48 @@ def _parse_fill_prices(items: Sequence[str]) -> dict[str, Decimal]:
             raise ValueError(f"fill prices must use SYMBOL=PRICE format: {item}")
         prices[symbol] = Decimal(raw_price)
     return prices
+
+
+def _build_fake_broker(
+    session: Session,
+    *,
+    dataset: ResearchDataset,
+    signal_date: date,
+    auto_fill: bool,
+    fill_price_by_symbol: dict[str, Decimal],
+) -> FakeBrokerGateway:
+    snapshots = SnapshotRepository()
+    latest_account = snapshots.latest_account_snapshot(session, run_mode="paper")
+    latest_positions = snapshots.latest_positions(session, run_mode="paper")
+    latest_prices = dataset.history_up_to(signal_date).latest_adjusted_closes()
+    return FakeBrokerGateway(
+        auto_fill=auto_fill,
+        fill_price_by_symbol=fill_price_by_symbol,
+        starting_cash=(
+            latest_account.cash if latest_account is not None else Decimal("100000.000000")
+        ),
+        starting_positions=_mark_positions_to_prices(
+            positions=latest_positions,
+            price_by_symbol=latest_prices,
+        ),
+    )
+
+
+def _mark_positions_to_prices(
+    *,
+    positions: Sequence[StoredPositionSnapshot],
+    price_by_symbol: dict[str, Decimal],
+) -> dict[str, tuple[Decimal, Decimal]]:
+    marked_positions: dict[str, tuple[Decimal, Decimal]] = {}
+    for position in positions:
+        price = price_by_symbol.get(position.symbol)
+        marked_market_value = (
+            (position.quantity * price).quantize(Decimal("0.000001"))
+            if price is not None
+            else position.market_value
+        )
+        marked_positions[position.symbol] = (position.quantity, marked_market_value)
+    return marked_positions
 
 
 def _default_timestamps() -> PaperRunTimestamps:

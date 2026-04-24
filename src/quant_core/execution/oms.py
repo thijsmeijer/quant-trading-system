@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -52,6 +53,7 @@ def build_execution_order_candidates(
     strategy_run_id: int,
     target_positions: tuple[PortfolioTargetPosition, ...],
     current_positions: tuple[tuple[str, Decimal], ...],
+    current_market_values: Mapping[str, Decimal] | None = None,
 ) -> tuple[ExecutionOrderCandidate, ...]:
     """Build deterministic OMS candidates from target and current quantities."""
 
@@ -61,6 +63,7 @@ def build_execution_order_candidates(
     current_by_symbol = {
         symbol: quantity.quantize(ORDER_PRECISION) for symbol, quantity in current_positions
     }
+    current_market_values = current_market_values or {}
 
     candidates: list[ExecutionOrderCandidate] = []
     for symbol in sorted(set(target_by_symbol) | set(current_by_symbol)):
@@ -76,6 +79,12 @@ def build_execution_order_candidates(
         side: Literal["BUY", "SELL"] = "BUY" if delta_quantity > Decimal("0") else "SELL"
         quantity = abs(delta_quantity)
         reference_price = target_position.reference_price if target_position is not None else None
+        if reference_price is None and current_quantity != Decimal("0"):
+            current_market_value = current_market_values.get(symbol)
+            if current_market_value is not None:
+                reference_price = (abs(current_market_value) / abs(current_quantity)).quantize(
+                    ORDER_PRECISION
+                )
         notional = None
         if reference_price is not None:
             notional = (
@@ -132,6 +141,7 @@ class OrderManagementService:
         strategy_run_id: int,
         run_mode: OperationalRunMode,
         created_at: datetime,
+        current_market_values: Mapping[str, Decimal] | None = None,
     ) -> tuple[StoredOrder, ...]:
         """Create internal orders from persisted target positions after risk approval."""
 
@@ -144,6 +154,14 @@ class OrderManagementService:
             (position.symbol, position.quantity)
             for position in self._snapshot_repository.latest_positions(session, run_mode=run_mode)
         )
+        if current_market_values is None:
+            current_market_values = {
+                position.symbol: position.market_value
+                for position in self._snapshot_repository.latest_positions(
+                    session,
+                    run_mode=run_mode,
+                )
+            }
         candidates = build_execution_order_candidates(
             strategy_run_id=strategy_run_id,
             target_positions=tuple(
@@ -158,6 +176,7 @@ class OrderManagementService:
                 for position in stored_positions
             ),
             current_positions=current_positions,
+            current_market_values=current_market_values,
         )
 
         created_orders = tuple(

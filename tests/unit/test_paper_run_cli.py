@@ -1,12 +1,18 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from quant_core.execution.cli import _load_dataset, _parse_fill_prices, _summary_payload
+from quant_core.data import StoredPositionSnapshot
+from quant_core.execution.cli import (
+    _load_dataset,
+    _mark_positions_to_prices,
+    _parse_fill_prices,
+    _summary_payload,
+)
 from quant_core.execution.paper_run import PaperRunSummary
 
 
@@ -66,4 +72,31 @@ def test_summary_payload_is_json_safe() -> None:
         "reconciliation_critical_rows": 0,
         "run_id": 42,
         "signal_date": "2026-04-22",
+    }
+
+
+def test_mark_positions_to_prices_uses_signal_date_prices_when_available() -> None:
+    marked = _mark_positions_to_prices(
+        positions=[
+            StoredPositionSnapshot(
+                symbol="SPY",
+                quantity=Decimal("2.000000"),
+                market_value=Decimal("1000.000000"),
+                as_of=datetime(2026, 4, 22, 20, 0, tzinfo=UTC),
+                average_cost=None,
+            ),
+            StoredPositionSnapshot(
+                symbol="BND",
+                quantity=Decimal("3.000000"),
+                market_value=Decimal("225.000000"),
+                as_of=datetime(2026, 4, 22, 20, 0, tzinfo=UTC),
+                average_cost=None,
+            ),
+        ],
+        price_by_symbol={"SPY": Decimal("510.000000")},
+    )
+
+    assert marked == {
+        "BND": (Decimal("3.000000"), Decimal("225.000000")),
+        "SPY": (Decimal("2.000000"), Decimal("1020.000000")),
     }

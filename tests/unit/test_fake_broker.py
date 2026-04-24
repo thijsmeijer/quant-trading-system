@@ -55,3 +55,30 @@ def test_fake_broker_can_cancel_submitted_orders() -> None:
 
     assert submission.order.status is BrokerOrderStatus.SUBMITTED
     assert canceled.status is BrokerOrderStatus.CANCELED
+
+
+def test_fake_broker_starts_from_existing_cash_and_positions() -> None:
+    broker = FakeBrokerGateway(
+        auto_fill=True,
+        starting_cash=Decimal("0.000000"),
+        starting_positions={"SHY": (Decimal("10.000000"), Decimal("800.000000"))},
+    )
+    request = BrokerOrderRequest(
+        internal_order_id="order_3",
+        idempotency_key="order:key-3",
+        symbol="SHY",
+        side="SELL",
+        quantity=Decimal("4.000000"),
+        notional=Decimal("320.000000"),
+        order_type="market",
+        time_in_force="day",
+        reference_price=Decimal("80.000000"),
+    )
+
+    broker.submit_order(request)
+
+    positions = broker.list_positions()
+    assert broker.get_account().cash == Decimal("320.000000")
+    assert positions[0].symbol == "SHY"
+    assert positions[0].quantity == Decimal("6.000000")
+    assert positions[0].market_value == Decimal("480.000000")
